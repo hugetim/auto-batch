@@ -25,8 +25,8 @@ class AutoBatch:
 
   def clear(self):
     global _cache, _batch_rows, _update_queue
-    _cache.clear()
-    _batch_rows.clear()
+    # _cache.clear()
+    # _batch_rows.clear()
     _update_queue.clear()
 
 
@@ -39,11 +39,11 @@ def _execute_queue():
 
 class BatchRow:
     def __init__(self, row):
-        global _cache, _batch_rows
+        # global _cache, _batch_rows
         self.row = row
-        self.id = row.get_id()
-        _cache[self.id] = dict(row)  #TODO: both _cache and _batch_rows need to be like [table_name][row_id]
-        _batch_rows[self.id] = self
+        # self.id = row.get_id()
+        # _cache[self.id] = dict(row)  #TODO: both _cache and _batch_rows need to be like [table_name][row_id]
+        # _batch_rows[self.id] = self
 
     def update(self, **fields):
         if _in_transaction:
@@ -54,17 +54,22 @@ class BatchRow:
         else:
             self.row.update(**fields)
     
-  
-    def update(self, table_name, row_id, **fields):
-        if self.in_transaction:
-            if row_id not in self.update_queue[table_name]:
-                self.update_queue[table_name][row_id] = {}
-            self.update_queue[table_name][row_id].update(fields)
-        else:
-            row = app_tables[table_name].get_by_id(row_id)
-            if row is not None:
-                row.update(**fields)
 
+class BatchTable:
+    def __init__(self, table_name):
+        self.table = tables.app_tables[table_name]
+
+    def search(self, *args, **kwargs):
+        for row in self.table.search(*args, **kwargs):
+            yield BatchRow(row)
+
+
+class AppTables:
+    def __getattr__(self, table_name):
+        return BatchTable(table_name)
+
+
+app_tables = AppTables()
 
 
 # class DataTableCache:

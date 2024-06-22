@@ -2,11 +2,12 @@ import anvil.server
 from anvil_extras.server_utils import timed
 from . import test
 from . import test_setup
+from . import auto_batch
 
 
 @anvil.server.callable
 def run_tests():
-  for i in range(2):
+  for i in range(1):
     test_setup.reset_tables()
     normal_test()
     test_setup.reset_tables()
@@ -27,7 +28,7 @@ def batch_test():
 
 @timed
 def auto_batch_test():
-  # monkey patch tables
+  test.tables = auto_batch
   test.normal_test_code()
 
 
