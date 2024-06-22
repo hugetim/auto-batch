@@ -1,0 +1,32 @@
+allow_embedding: false
+package_name: Forum_Transaction_Bug
+db_schema:
+  table_1:
+    title: Table 1
+    client: none
+    server: full
+    columns:
+    - name: object
+      admin_ui: {width: 200}
+      type: simpleObject
+    - name: rows
+      admin_ui: {width: 200}
+      type: link_multiple
+      target: table_2
+  table_2:
+    title: Table 2
+    client: none
+    server: full
+    columns:
+    - name: text
+      admin_ui: {width: 200}
+      type: string
+name: Clone of Forum Transaction Bug
+startup_form: Form1
+correct_dependency_ids: {}
+runtime_options: {version: 2, client_version: '3', server_version: python3-full, server_spec: null}
+dependencies: []
+services:
+- source: /runtime/services/tables.yml
+  client_config: {enable_v2: true}
+  server_config: {}
