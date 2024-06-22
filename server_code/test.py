@@ -6,6 +6,7 @@ import anvil.tables as tables
 def normal_test_code():
   rows = app_tables.table_2.search()
   for row in rows:
+    a = {row: 3}
     row.update(text="2")
 
 

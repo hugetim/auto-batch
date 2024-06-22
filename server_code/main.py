@@ -1,15 +1,18 @@
 import anvil.server
 from anvil_extras.server_utils import timed
-import test
-import test_setup
+from . import test
+from . import test_setup
 
 
 @anvil.server.callable
 def run_tests():
-  test_setup.reset_tables()
-  normal_test()
-  test_setup.reset_tables()
-  auto_batch_test()
+  for i in range(2):
+    test_setup.reset_tables()
+    normal_test()
+    test_setup.reset_tables()
+    batch_test()
+    test_setup.reset_tables()
+    auto_batch_test()
 
 
 @timed
