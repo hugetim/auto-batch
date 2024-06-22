@@ -4,6 +4,7 @@ from collections import defaultdict
 
 
 _cache = defaultdict(dict)  # Cache for tables
+_batch_rows = defaultdict(dict)
 _update_queue = defaultdict(dict)  # Queue for update operations
 _in_transaction = False
 
@@ -11,18 +12,23 @@ _in_transaction = False
 class AutoBatch:
   def __enter__(self):
     # init. caching, clearing any prev. cache
-    global _cache, _update_queue, _in_transaction
-    _cache.clear()
-    _update_queue.clear()
+    global _in_transaction
+    self.clear()
     _in_transaction = True
     
   def __exit__(self, exc_type, exc_value, exc_tb):
     # execute cached actions and exit
-    global _cache, _update_queue, _in_transaction
+    global _in_transaction
     _execute_queue()
     _in_transaction = False
+    self.clear()
+
+  def clear(self):
+    global _cache, _batch_rows, _update_queue
     _cache.clear()
+    _batch_rows.clear()
     _update_queue.clear()
+
 
 
 def _execute_queue():
@@ -31,21 +37,22 @@ def _execute_queue():
             row.update(**fields)
 
 
-class CachedRow:
+class BatchRow:
     def __init__(self, row):
+        global _cache, _batch_rows
         self.row = row
+        self.id = row.get_id()
+        _cache[self.id] = dict(row)  #TODO: both _cache and _batch_rows need to be like [table_name][row_id]
+        _batch_rows[self.id] = self
 
     def update(self, **fields):
         if _in_transaction:
             if self.row not in _update_queue:
                 _update_queue[self.row] = {}
-            self.cache.update_queue[self.table_name][self.row_id].update(fields)
-            self.data.update(fields)
+            _update_queue[self.row].update(fields)
+            _cache[self.id].update(fields)
         else:
-            row = app_tables[self.table_name].get_by_id(self.row_id)
-            if row is not None:
-                row.update(**fields)
-            self.data.update(fields)
+            self.row.update(**fields)
     
   
     def update(self, table_name, row_id, **fields):
