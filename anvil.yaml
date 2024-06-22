@@ -21,8 +21,8 @@ db_schema:
     - name: text
       admin_ui: {width: 200}
       type: string
-name: Clone of Forum Transaction Bug
-startup_form: Form1
+name: AutoBatch
+startup_form: null
 correct_dependency_ids: {}
 runtime_options: {version: 2, client_version: '3', server_version: python3-full, server_spec: null}
 dependencies: []
@@ -30,3 +30,4 @@ services:
 - source: /runtime/services/tables.yml
   client_config: {enable_v2: true}
   server_config: {}
+startup: {type: module, module: startup}
