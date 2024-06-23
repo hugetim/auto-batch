@@ -24,26 +24,28 @@ class AutoBatch:
   def __exit__(self, exc_type, exc_value, exc_tb):
     # execute cached actions and exit
     global _in_transaction
-    _execute_queue()
+    process_batch()
     _in_transaction = False
     self.clear()
 
   def clear(self):
-    global _batch_rows, _update_queue
+    global _batch_rows
     # _batch_rows.clear()
-    _update_queue.clear()
 
 
-
-def _execute_queue():
+def process_batch():
+    global _update_queue
     with anvil.tables.batch_update:
         for row, fields in _update_queue.items():
             row.update(**fields)
+    _update_queue.clear()
 
 
 class BatchRow(Row):
-    def __init__(self, row):
+    def __init__(self, table_name, row):
         # global _batch_rows
+        # TODO: check if already have cache of row (by id)---possibly with already-cached changes
+        self.table_name = table_name
         self.row = row
         # self.id = row.get_id()
 
@@ -66,7 +68,7 @@ class BatchRow(Row):
         return len(self.row)
   
     def __getitem__(self, index):
-        # TODO: cache values in self._cache
+        # TODO: cache values in self._cache, wrapping any Rows
         return self.row[index]
 
 
@@ -83,16 +85,21 @@ class BatchSearchIterator(SearchIterator):
         for row in self.batch_iter:
             # #TODO: _batch_rows need to be like [table_name][row_id]
             # _batch_rows[table_name][batch_row.get_id()] = batch_row
-            yield BatchRow(row)
+            yield BatchRow(self.table_name, row)
+
+    def __getitem__(self, index):
+        row = self.search_iterator[index]
+        return BatchRow(self.table_name, row)
       
 
 class BatchTable(Table):
     def __init__(self, table_name):
         print(f"BatchTable('{table_name}')")
-        self.table = anvil.tables.app_tables[table_name]
+        self.table_name = table_name
+        self.table = anvil.tables.app_tables[self.table_name]
 
     def search(self, *args, **kwargs):
-        return BatchSearchIterator(self.table.search(*args, **kwargs))
+        return BatchSearchIterator(self.table_name, self.table.search(*args, **kwargs))
 
 
 class AppTables:
