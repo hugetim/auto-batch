@@ -1,13 +1,13 @@
 import anvil.tables
-from anvil.tables import query
-from anvil.tables import Row, SearchIterator, Table, Transaction
-from anvil.tables import order_by, get_connection_string
-from anvil.tables import NoSuchColumnError, QuotaExceededError, RowDeleted, TableError, TransactionConflict
+from anvil.tables import Row, SearchIterator, Table
 from functools import wraps
 from collections import defaultdict
 
 
-_cache = defaultdict(dict)  # Cache for tables
+def __getattr__(attr):
+    return getattr(anvil.tables, attr)
+
+
 _batch_rows = defaultdict(dict)
 _update_queue = defaultdict(dict)  # Queue for update operations
 _in_transaction = False
@@ -29,8 +29,7 @@ class AutoBatch:
     self.clear()
 
   def clear(self):
-    global _cache, _batch_rows, _update_queue
-    # _cache.clear()
+    global _batch_rows, _update_queue
     # _batch_rows.clear()
     _update_queue.clear()
 
@@ -42,13 +41,11 @@ def _execute_queue():
             row.update(**fields)
 
 
-class BatchRow:
+class BatchRow(Row):
     def __init__(self, row):
-        # global _cache, _batch_rows
+        # global _batch_rows
         self.row = row
         # self.id = row.get_id()
-        # _cache[self.id] = dict(row)  #TODO: both _cache and _batch_rows need to be like [table_name][row_id]
-        # _batch_rows[self.id] = self
 
     def update(self, **fields):
         if _in_transaction:
@@ -69,20 +66,40 @@ class BatchRow:
         return len(self.row)
   
     def __getitem__(self, index):
+        # TODO: cache values in self._cache
         return self.row[index]
-    
 
-class BatchTable:
+
+class BatchSearchIterator(SearchIterator):
+    def __init__(self, table_name, search_iterator):
+        self.search_iterator = search_iterator
+        self.table_name = table_name
+  
+    def __len__(self):
+        return len(self.search_iterator)
+
+    def __iter__(self):
+        self.batch_iter = iter(self.search_iterator)
+        for row in self.batch_iter:
+            # #TODO: _batch_rows need to be like [table_name][row_id]
+            # _batch_rows[table_name][batch_row.get_id()] = batch_row
+            yield BatchRow(row)
+      
+
+class BatchTable(Table):
     def __init__(self, table_name):
+        print(f"BatchTable('{table_name}')")
         self.table = anvil.tables.app_tables[table_name]
 
-    def search(self, *args, **kwargs): # TODO return a BatchSearchIterator instead, which has a fast len method
-        for row in self.table.search(*args, **kwargs):
-            yield BatchRow(row)
+    def search(self, *args, **kwargs):
+        return BatchSearchIterator(self.table.search(*args, **kwargs))
 
 
 class AppTables:
     def __getattr__(self, table_name):
+        return self[table_name]
+
+    def __getitem__(self, table_name):
         return BatchTable(table_name)
 
 

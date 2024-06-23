@@ -2,7 +2,7 @@ from anvil.tables import app_tables
 import anvil.tables as tables
 
 
-DATA = [dict(text="1")]*25
+DATA = [dict(text="1")]*60
 
 
 def reset_tables():

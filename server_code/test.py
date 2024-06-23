@@ -9,7 +9,6 @@ def normal_test_code(tables):
     len(rows)
     timer.check("len(search result)")
     for row in rows:
-      a = {row: 3}
       row.update(text="2")
 
 
