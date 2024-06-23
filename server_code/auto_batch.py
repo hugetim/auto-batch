@@ -58,13 +58,25 @@ class BatchRow:
             # _cache[self.id].update(fields)
         else:
             self.row.update(**fields)
+
+    def delete(self):
+        raise NotImplementedError
+  
+    def get_id(self):
+        return self.row.get_id()
+  
+    def __len__(self):
+        return len(self.row)
+  
+    def __getitem__(self, index):
+        return self.row[index]
     
 
 class BatchTable:
     def __init__(self, table_name):
         self.table = anvil.tables.app_tables[table_name]
 
-    def search(self, *args, **kwargs):
+    def search(self, *args, **kwargs): # TODO return a BatchSearchIterator instead, which has a fast len method
         for row in self.table.search(*args, **kwargs):
             yield BatchRow(row)
 
