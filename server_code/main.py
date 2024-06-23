@@ -1,7 +1,7 @@
 import anvil.server
 from anvil_extras.server_utils import timed
 from . import test
-from . import auto_batch_test
+from . import auto_batch_test as abt
 from . import test_setup
 from . import auto_batch
 
@@ -17,19 +17,19 @@ def run_tests():
     auto_batch_test()
 
 
-@timed
 def normal_test():
+  print("normal_test")
   test.normal_test()
 
 
-@timed
 def batch_test():
+  print("batch_test")
   test.batch_test_code()
 
 
-@timed
 def auto_batch_test():
+  print("auto_batch_test")
   # test.tables = auto_batch
-  auto_batch_test.auto_batch_test()
+  abt.auto_batch_test()
 
 

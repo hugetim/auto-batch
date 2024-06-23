@@ -1,7 +1,7 @@
-import auto_batch as tables
-import test
+from . import auto_batch as tables
+from . import test
 
 
 @tables.in_transaction
 def auto_batch_test():
-  normal_test_code()
+  test.normal_test_code(tables)
