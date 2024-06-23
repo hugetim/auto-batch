@@ -12,6 +12,7 @@ _in_transaction = False
 class AutoBatch:
   def __enter__(self):
     # init. caching, clearing any prev. cache
+    print("enter")
     global _in_transaction
     self.clear()
     _in_transaction = True
@@ -50,7 +51,7 @@ class BatchRow:
             if self.row not in _update_queue:
                 _update_queue[self.row] = {}
             _update_queue[self.row].update(fields)
-            _cache[self.id].update(fields)
+            # _cache[self.id].update(fields)
         else:
             self.row.update(**fields)
     
@@ -193,10 +194,11 @@ def in_transaction(*d_args, **d_kwargs):
         tables_in_transaction = tables.in_transaction(*d_args, **d_kwargs)
     
     def decorator(func):
-        @wraps(func)
+        
         @tables_in_transaction
+        @wraps(func)
         def out_function(*args, **kwargs):
-            with AutoBatch:
+            with AutoBatch():
               result = func(*args, **kwargs) # Call the original function
             return result
         
