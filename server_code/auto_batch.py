@@ -1,4 +1,8 @@
-import anvil.tables as tables
+import anvil.tables
+from anvil.tables import query
+from anvil.tables import Row, SearchIterator, Table, Transaction
+from anvil.tables import order_by, get_connection_string
+from anvil.tables import NoSuchColumnError, QuotaExceededError, RowDeleted, TableError, TransactionConflict
 from functools import wraps
 from collections import defaultdict
 
@@ -33,7 +37,7 @@ class AutoBatch:
 
 
 def _execute_queue():
-    with tables.batch_update:
+    with anvil.tables.batch_update:
         for row, fields in _update_queue.items():
             row.update(**fields)
 
@@ -58,7 +62,7 @@ class BatchRow:
 
 class BatchTable:
     def __init__(self, table_name):
-        self.table = tables.app_tables[table_name]
+        self.table = anvil.tables.app_tables[table_name]
 
     def search(self, *args, **kwargs):
         for row in self.table.search(*args, **kwargs):
@@ -189,9 +193,9 @@ def in_transaction(*d_args, **d_kwargs):
     only_arg_is_func_to_decorate = (len(d_args) == 1 and callable(d_args[0]) and not d_kwargs)
     if only_arg_is_func_to_decorate:
         func_to_decorate = d_args[0]
-        tables_in_transaction = tables.in_transaction
+        tables_in_transaction = anvil.tables.in_transaction
     else:
-        tables_in_transaction = tables.in_transaction(*d_args, **d_kwargs)
+        tables_in_transaction = anvil.tables.in_transaction(*d_args, **d_kwargs)
     
     def decorator(func):
         
