@@ -106,17 +106,16 @@ class BatchTable(Table):
             batch_row = self._cache[row.get_id()]
         else:
             batch_row = BatchRow(row)
-            self._cache[row.get_id()] = batch_row
+            if _batching:
+                self._cache[row.get_id()] = batch_row
         return batch_row
 
     def get_by_id(self, row_id):
         if row_id in self._cache:
-            row = self._cache[row_id]
+            batch_row = self._cache[row_id]
         else:
-            row = self.table.get_by_id(row_id)
-            if _batching:
-                self._cache[row_id] = row
-        return row
+            batch_row = self._get_batch_row(self.table.get_by_id(row_id))
+        return batch_row
     
     def clear_cache(self):
         self._cache = {}
