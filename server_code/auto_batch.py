@@ -16,7 +16,6 @@ _batching = False
 class AutoBatch:
   def __enter__(self):
     # init. caching, clearing any prev. cache
-    print("enter")
     global _batching
     self.clear()
     _batching = True
@@ -29,8 +28,10 @@ class AutoBatch:
     self.clear()
 
   def clear(self):
-    global _batch_tables
-    _batch_tables.clear()
+      global _batch_tables
+      for batch_table in _batch_tables.values():
+          batch_table.clear_cache()
+      _batch_tables.clear()
 
 
 def process_batch():
@@ -122,7 +123,8 @@ class AppTables:
             batch_table = _batch_tables[table_name]
         else:
             batch_table = BatchTable(table_name)
-            _batch_tables[table_name] = batch_table
+            if _batching:
+                _batch_tables[table_name] = batch_table
         return batch_table
 
 
