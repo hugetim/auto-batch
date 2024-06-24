@@ -10,27 +10,27 @@ def __getattr__(attr):
 
 _batch_rows = defaultdict(dict)
 _update_queue = defaultdict(dict)  # Queue for update operations
-_in_transaction = False
+_batching = False
 
 
 class AutoBatch:
   def __enter__(self):
     # init. caching, clearing any prev. cache
     print("enter")
-    global _in_transaction
+    global _batching
     self.clear()
-    _in_transaction = True
+    _batching = True
     
   def __exit__(self, exc_type, exc_value, exc_tb):
     # execute cached actions and exit
-    global _in_transaction
+    global _batching
     process_batch()
-    _in_transaction = False
+    _batching = False
     self.clear()
 
   def clear(self):
     global _batch_rows
-    # _batch_rows.clear()
+    _batch_rows.clear()
 
 
 def process_batch():
@@ -42,19 +42,25 @@ def process_batch():
 
 
 class BatchRow(Row):
-    def __init__(self, table_name, row):
-        # global _batch_rows
-        # TODO: check if already have cache of row (by id)---possibly with already-cached changes
-        self.table_name = table_name
+    def __init__(self, row):
         self.row = row
-        # self.id = row.get_id()
+        self._cache = {}
 
+    def __getitem__(self, index):
+        if index in self._cache:
+            item = self._cache[index]
+        else:
+            item = self.row[index]
+            if _batching:
+                self._cache[index] = item
+        return item
+    
     def update(self, **fields):
-        if _in_transaction:
+        if _batching:
             if self.row not in _update_queue:
                 _update_queue[self.row] = {}
             _update_queue[self.row].update(fields)
-            # _cache[self.id].update(fields)
+            self._cache.update(fields)
         else:
             self.row.update(**fields)
 
@@ -66,10 +72,6 @@ class BatchRow(Row):
   
     def __len__(self):
         return len(self.row)
-  
-    def __getitem__(self, index):
-        # TODO: cache values in self._cache, wrapping any Rows
-        return self.row[index]
 
 
 class BatchSearchIterator(SearchIterator):
@@ -83,14 +85,20 @@ class BatchSearchIterator(SearchIterator):
     def __iter__(self):
         self.batch_iter = iter(self.search_iterator)
         for row in self.batch_iter:
-            # #TODO: _batch_rows need to be like [table_name][row_id]
-            # _batch_rows[table_name][batch_row.get_id()] = batch_row
-            yield BatchRow(self.table_name, row)
+            yield self._get_batch_row(row)
 
     def __getitem__(self, index):
         row = self.search_iterator[index]
-        return BatchRow(self.table_name, row)
-      
+        return self._get_batch_row(row)
+
+    def _get_batch_row(self, row):
+        global _batch_rows
+        if row.get_id() in _batch_rows[self.table_name]:
+            batch_row = _batch_rows[self.table_name][row.get_id()]
+        else:
+            batch_row = BatchRow(row)
+            _batch_rows[self.table_name][row.get_id()] = batch_row
+        return batch_row
 
 class BatchTable(Table):
     def __init__(self, table_name):
