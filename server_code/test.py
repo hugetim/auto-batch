@@ -11,7 +11,9 @@ def normal_test_code(tables):
     print(rows[0]['text'])
     tables.app_tables.table_2.get_by_id(rows[0].get_id())
     row1 = tables.app_tables.table_1.get(object="test")
+    print(row1['row']['text'])
     print(row1['rows'][0]['text'])
+
     
 
 @tables.in_transaction
@@ -29,4 +31,5 @@ def batch_test_code():
     print(rows[0]['text'])
     tables.app_tables.table_2.get_by_id(rows[0].get_id())
     row1 = tables.app_tables.table_1.get(object="test")
+    print(row1['row']['text'])
     print(row1['rows'][0]['text'])
