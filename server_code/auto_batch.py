@@ -8,7 +8,7 @@ def __getattr__(attr):
     return getattr(anvil.tables, attr)
 
 
-_batch_rows = defaultdict(dict)
+_batch_tables = {}
 _update_queue = defaultdict(dict)  # Queue for update operations
 _batching = False
 
@@ -29,8 +29,8 @@ class AutoBatch:
     self.clear()
 
   def clear(self):
-    global _batch_rows
-    _batch_rows.clear()
+    global _batch_tables
+    _batch_tables.clear()
 
 
 def process_batch():
@@ -75,39 +75,41 @@ class BatchRow(Row):
 
 
 class BatchSearchIterator(SearchIterator):
-    def __init__(self, table_name, search_iterator):
+    def __init__(self, batch_table, search_iterator):
+        self.batch_table = batch_table
         self.search_iterator = search_iterator
-        self.table_name = table_name
   
     def __len__(self):
         return len(self.search_iterator)
 
     def __iter__(self):
-        self.batch_iter = iter(self.search_iterator)
-        for row in self.batch_iter:
-            yield self._get_batch_row(row)
+        for row in iter(self.search_iterator):
+            yield self.batch_table._get_batch_row(row)
 
     def __getitem__(self, index):
         row = self.search_iterator[index]
-        return self._get_batch_row(row)
+        return self.batch_table._get_batch_row(row)
 
-    def _get_batch_row(self, row):
-        global _batch_rows
-        if row.get_id() in _batch_rows[self.table_name]:
-            batch_row = _batch_rows[self.table_name][row.get_id()]
-        else:
-            batch_row = BatchRow(row)
-            _batch_rows[self.table_name][row.get_id()] = batch_row
-        return batch_row
 
 class BatchTable(Table):
     def __init__(self, table_name):
-        print(f"BatchTable('{table_name}')")
         self.table_name = table_name
         self.table = anvil.tables.app_tables[self.table_name]
+        self.clear_cache()
 
     def search(self, *args, **kwargs):
-        return BatchSearchIterator(self.table_name, self.table.search(*args, **kwargs))
+        return BatchSearchIterator(self, self.table.search(*args, **kwargs))
+
+    def _get_batch_row(self, row):
+        if row.get_id() in self._cache:
+            batch_row = self._cache[row.get_id()]
+        else:
+            batch_row = BatchRow(row)
+            self._cache[row.get_id()] = batch_row
+        return batch_row
+
+    def clear_cache(self):
+        self._cache = {}
 
 
 class AppTables:
@@ -115,7 +117,13 @@ class AppTables:
         return self[table_name]
 
     def __getitem__(self, table_name):
-        return BatchTable(table_name)
+        global _batch_tables
+        if table_name in _batch_tables:
+            batch_table = _batch_tables[table_name]
+        else:
+            batch_table = BatchTable(table_name)
+            _batch_tables[table_name] = batch_table
+        return batch_table
 
 
 app_tables = AppTables()
