@@ -10,8 +10,12 @@ db_schema:
       admin_ui: {width: 200}
       type: simpleObject
     - name: rows
-      admin_ui: {width: 200}
+      admin_ui: {order: 3, width: 200}
       type: link_multiple
+      target: table_2
+    - name: row
+      admin_ui: {width: 200, order: 2}
+      type: link_single
       target: table_2
   table_2:
     title: Table 2

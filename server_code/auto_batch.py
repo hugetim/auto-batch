@@ -11,6 +11,7 @@ def __getattr__(attr):
 _batch_tables = {}
 _update_queue = defaultdict(dict)  # Queue for update operations
 _batching = False
+_TABLE_NAMES = {anvil.tables.app_tables[name]._id: name for name in list(anvil.tables.app_tables)}
 
 
 class AutoBatch:
@@ -45,16 +46,27 @@ def process_batch():
 class BatchRow(Row):
     def __init__(self, row):
         self.row = row
+        # self._column_types = {col['name']: col['type'] for }
         self._cache = {}
 
-    def __getitem__(self, index):
-        if index in self._cache:
-            item = self._cache[index]
+    def __getitem__(self, column):
+        if column in self._cache:
+            item = self._cache[column]
         else:
-            item = self.row[index]
+            item = self._process_item(self.row[column])
             if _batching:
-                self._cache[index] = item
+                self._cache[column] = item
         return item
+
+    def _process_item(self, item):
+        if isinstance(item, anvil.tables.Row):
+            batch_table = _batch_tables[_TABLE_NAMES[item._table_id]]
+            return batch_table.get_batch_row(item)
+        elif isinstance(item, list) and item and isinstance(item[0], anvil.tables.Row):
+            batch_table = _batch_tables[_TABLE_NAMES[item[0]._table_id]]
+            return [batch_table.get_batch_row(row) for row in item]
+        else:
+            return item
     
     def update(self, **fields):
         if _batching:
@@ -85,11 +97,11 @@ class BatchSearchIterator(SearchIterator):
 
     def __iter__(self):
         for row in iter(self.search_iterator):
-            yield self.batch_table._get_batch_row(row)
+            yield self.batch_table.get_batch_row(row)
 
     def __getitem__(self, index):
         row = self.search_iterator[index]
-        return self.batch_table._get_batch_row(row)
+        return self.batch_table.get_batch_row(row)
 
 
 class BatchTable(Table):
@@ -101,7 +113,10 @@ class BatchTable(Table):
     def search(self, *args, **kwargs):
         return BatchSearchIterator(self, self.table.search(*args, **kwargs))
 
-    def _get_batch_row(self, row):
+    def get(self, *args, **kwargs):
+        return self.get_batch_row(self.table.get(*args, **kwargs))
+    
+    def get_batch_row(self, row):
         if row.get_id() in self._cache:
             batch_row = self._cache[row.get_id()]
         else:
@@ -114,7 +129,7 @@ class BatchTable(Table):
         if row_id in self._cache:
             batch_row = self._cache[row_id]
         else:
-            batch_row = self._get_batch_row(self.table.get_by_id(row_id))
+            batch_row = self.get_batch_row(self.table.get_by_id(row_id))
         return batch_row
     
     def clear_cache(self):
