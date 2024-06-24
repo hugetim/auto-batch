@@ -53,12 +53,12 @@ class BatchRow(Row):
         if column in self._cache:
             item = self._cache[column]
         else:
-            item = self._process_item(self.row[column])
+            item = self._batchify_if_row(self.row[column])
             if _batching:
                 self._cache[column] = item
         return item
 
-    def _process_item(self, item):
+    def _batchify_if_row(self, item):
         if isinstance(item, anvil.tables.Row):
             batch_table = _batch_tables[_TABLE_NAMES[item._table_id]]
             return batch_table.get_batch_row(item)
@@ -67,8 +67,15 @@ class BatchRow(Row):
             return [batch_table.get_batch_row(row) for row in item]
         else:
             return item
+            
+    def __setitem__(self, column, value):
+        self.update(**{column: value})
+
+    def _process_fields(self, fields):
+        
     
     def update(self, **fields):
+        fields = self._process_fields(fields)
         if _batching:
             if self.row not in _update_queue:
                 _update_queue[self.row] = {}
@@ -82,9 +89,6 @@ class BatchRow(Row):
   
     def get_id(self):
         return self.row.get_id()
-  
-    def __len__(self):
-        return len(self.row)
 
 
 class BatchSearchIterator(SearchIterator):
@@ -111,12 +115,16 @@ class BatchTable(Table):
         self.clear_cache()
 
     def search(self, *args, **kwargs):
+        process_batch()
         return BatchSearchIterator(self, self.table.search(*args, **kwargs))
 
     def get(self, *args, **kwargs):
+        process_batch()
         return self.get_batch_row(self.table.get(*args, **kwargs))
     
     def get_batch_row(self, row):
+        if row is None:
+            return None
         if row.get_id() in self._cache:
             batch_row = self._cache[row.get_id()]
         else:

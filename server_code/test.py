@@ -13,8 +13,9 @@ def normal_test_code(tables):
     row1 = tables.app_tables.table_1.get(object="test")
     print(row1['row']['text'])
     print(row1['rows'][0]['text'])
+    row1['row']['text'] = "3"
+    print(bool(tables.app_tables.table_2.get(text="3")))
 
-    
 
 @tables.in_transaction
 def normal_test():
@@ -33,3 +34,5 @@ def batch_test_code():
     row1 = tables.app_tables.table_1.get(object="test")
     print(row1['row']['text'])
     print(row1['rows'][0]['text'])
+    row1['row']['text'] = "3"
+    print(bool(tables.app_tables.table_2.get(text="3")))
