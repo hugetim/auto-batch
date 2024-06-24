@@ -9,6 +9,7 @@ def normal_test_code(tables):
   for row in rows:
     row.update(text="2")
   print(rows[0]['text'])
+  tables.app_tables.table_2.get_by_id(rows[0].get_id())
 
 
 @tables.in_transaction
@@ -24,3 +25,4 @@ def batch_test_code():
     for row in rows:
       row.update(text="2")
   print(rows[0]['text'])
+  tables.app_tables.table_2.get_by_id(rows[0].get_id())
