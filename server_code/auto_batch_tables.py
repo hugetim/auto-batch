@@ -2,10 +2,15 @@ import anvil.tables
 from .auto_batch import batch_tables as app_tables
 from .auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
 from functools import wraps
+from contextlib import nullcontext
 
 
 def __getattr__(attr):
     return getattr(anvil.tables, attr)
+
+
+batch_update = nullcontext()
+batch_delete = nullcontext()
 
 
 class Transaction:

@@ -25,7 +25,10 @@ def normal_test():
     normal_test_code(tables)
 
 @tables.in_transaction
-def batch_test_code():
+def batch_test():
+    batch_test_code(tables)
+    
+def batch_test_code(tables):
     with TimerLogger("batch_test_code", format="{name}: {elapsed:6.3f} s | {msg}") as timer:
         rows = tables.app_tables.table_2.search()
     len(rows)

@@ -128,7 +128,10 @@ class BatchTable(anvil.tables.Table):
             batch_row = self._get_new_batch_row(row)
         return batch_row
 
-    def delete(self):
+    def add_row(self):
+        raise NotImplementedError
+
+    def add_rows(self):
         raise NotImplementedError
 
     def get_batch_row(self, row):
