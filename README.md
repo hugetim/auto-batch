@@ -1,4 +1,4 @@
-# auto-branch
+# auto-batch
 
 ### Built With
 
