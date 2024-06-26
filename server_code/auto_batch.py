@@ -3,7 +3,7 @@ from collections import defaultdict
 from functools import wraps
 
 
-_update_queue = defaultdict(dict)  # Queue for update operations
+_update_queue = defaultdict(dict)
 _delete_queue = []
 _batching = False
 
@@ -63,11 +63,10 @@ class BatchRow(anvil.tables.Row):
     @if_not_deleted
     def __getitem__(self, column):
         if column in self._cache:
-            value = self._cache[column]
-        else:
-            value = batchify(self.row[column])
-            if _batching:
-                self._cache[column] = value
+            return self._cache[column]
+        value = batchify(self.row[column])
+        if _batching:
+            self._cache[column] = value
         return value
 
     @if_not_deleted
@@ -77,13 +76,12 @@ class BatchRow(anvil.tables.Row):
     @if_not_deleted
     def update(self, **fields):
         debatchified_fields = BatchRow._debatchify_fields(fields)
-        if _batching:
-            if self.row not in _update_queue:
-                _update_queue[self.row] = {}
-            _update_queue[self.row].update(debatchified_fields)
-            self._cache.update(debatchified_fields)
-        else:
+        if not _batching:
             self.row.update(**debatchified_fields)
+        if self.row not in _update_queue:
+            _update_queue[self.row] = {}
+        _update_queue[self.row].update(debatchified_fields)
+        self._cache.update(debatchified_fields)
 
     @if_not_deleted
     def delete(self):
