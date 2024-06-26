@@ -20,6 +20,7 @@ def process_batch_add():
             BatchTable.of_row(row).add_batch_row(batch_rows[i])
     _add_queue.clear()
 
+
 def process_batch_update():
     global _update_queue
     with anvil.tables.batch_update:
