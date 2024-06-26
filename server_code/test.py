@@ -22,7 +22,9 @@ def normal_test_code(tables):
         print(rows[3]['text'])
     except tables.RowDeleted as e:
         print(repr(e))
-
+    new_rows = [tables.app_tables.table_2.add_row(text="5") for i in range(10)]
+    print(new_rows[0].get_id())
+    new_rows[-1].update(text="6")
 
 @tables.in_transaction
 def normal_test():
@@ -55,4 +57,6 @@ def batch_test_code(tables):
         print(rows[3]['text'])
     except tables.RowDeleted as e:
         print(repr(e))
-
+    new_rows = tables.app_tables.table_2.add_rows([dict(text="5")]*10)
+    print(new_rows[0].get_id())
+    new_rows[-1].update(text="6")

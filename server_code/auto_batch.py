@@ -3,28 +3,41 @@ from collections import defaultdict
 from functools import wraps
 
 
+_add_queue = defaultdict(dict)
 _update_queue = defaultdict(dict)
 _delete_queue = []
 _batching = False
 
 
+def process_batch_add():
+    global _add_queue
+    for batch_table in _add_queue:
+        batch_rows = list(_add_queue[batch_table].keys())
+        column_values_list = [column_values for column_values in _add_queue[batch_table].values()]
+        rows = batch_table.table.add_rows(column_values_list)
+        for i, row in enumerate(rows):
+            batch_rows[i].row = row
+            BatchTable.of_row(row).add_batch_row(batch_rows[i])
+    _add_queue.clear()
+
 def process_batch_update():
     global _update_queue
     with anvil.tables.batch_update:
-        for row, fields in _update_queue.items():
-            row.update(**fields)
+        for batch_row, column_values in _update_queue.items():
+            batch_row.row.update(**column_values)
     _update_queue.clear()
 
 
 def process_batch_delete():
     global _delete_queue
     with anvil.tables.batch_delete:
-        for row in _delete_queue:
-            row.delete()
+        for batch_row in _delete_queue:
+            batch_row.row.delete()
     _delete_queue.clear()
 
 
 def process_batch():
+    process_batch_add()
     process_batch_update()
     process_batch_delete()
 
@@ -56,10 +69,28 @@ def if_not_deleted(func):
 
 class BatchRow(anvil.tables.Row):
     def __init__(self, row):
-        self.row = row
+        self._row = row
         self._cache = {}
         self._deleted = False
 
+    @staticmethod
+    def from_batched_add(column_values):
+        batch_row = BatchRow(None)
+        batch_row._cache = column_values
+        return batch_row
+    
+    @property
+    def row(self):
+        if not self._row:
+            if _add_queue:
+                print("AutoBatch: process_batch_add triggered early, probably by get_id()")
+            process_batch_add()
+        return self._row
+
+    @row.setter
+    def row(self, value):
+        self._row = value
+    
     @if_not_deleted
     def __getitem__(self, column):
         if column in self._cache:
@@ -74,21 +105,19 @@ class BatchRow(anvil.tables.Row):
         self.update(**{column: value})
 
     @if_not_deleted
-    def update(self, **fields):
-        debatchified_fields = BatchRow._debatchify_fields(fields)
+    def update(self, **column_values):
+        debatchified_column_values = BatchRow._debatchify_column_values(column_values)
         if not _batching:
-            self.row.update(**debatchified_fields)
-        if self.row not in _update_queue:
-            _update_queue[self.row] = {}
-        _update_queue[self.row].update(debatchified_fields)
-        self._cache.update(debatchified_fields)
+            self.row.update(**debatchified_column_values)
+        _update_queue[self].update(debatchified_column_values)
+        self._cache.update(debatchified_column_values)
 
     @if_not_deleted
     def delete(self):
         global _delete_queue
         if not _batching:
             return self.row.delete()
-        _delete_queue.append(self.row)
+        _delete_queue.append(self)
         self._deleted = True
             
     @if_not_deleted
@@ -99,8 +128,8 @@ class BatchRow(anvil.tables.Row):
         self._cache.clear()
 
     @staticmethod
-    def _debatchify_fields(fields):
-        return {key: debatchify(value) for key, value in fields.items()}
+    def _debatchify_column_values(column_values):
+        return {column: debatchify(value) for column, value in column_values.items()}
 
 
 def batchify(value):
@@ -145,10 +174,14 @@ class BatchTable(anvil.tables.Table):
         self.clear_cache()
         
     def search(self, *args, **kwargs):
+        if _add_queue or _update_queue or _delete_queue:
+            print("AutoBatch: process_batch triggered early by search")
         process_batch()
         return BatchSearchIterator(self, self.table.search(*args, **kwargs))
 
     def get(self, *args, **kwargs):
+        if _add_queue or _update_queue or _delete_queue:
+            print("AutoBatch: process_batch triggered early by get")
         process_batch()
         return self.get_batch_row(self.table.get(*args, **kwargs))
     
@@ -160,14 +193,22 @@ class BatchTable(anvil.tables.Table):
             batch_row = self._get_new_batch_row(row)
         return batch_row
 
-    def add_row(self):
-        raise NotImplementedError
+    def add_row(self, **column_values):
+        global _add_queue
+        if not _batching:
+            anvil.tables.add_row(**column_values)
+        batch_row = BatchRow.from_batched_add(column_values)
+        _add_queue[self][batch_row] = column_values
+        return batch_row
 
-    def add_rows(self):
-        raise NotImplementedError
+    def add_rows(self, column_values_list):
+        return [self.add_row(**column_values) for column_values in column_values_list]
 
-    def delete_all_rows(self):
-        raise NotImplementedError
+    def delete_all_rows(self, *args, **kwargs):
+        return self.table.delete_all_rows(*args, **kwargs) # TODO: try batching with other deletes
+
+    def add_batch_row(self, batch_row):
+        self._batch_rows[batch_row.row.get_id()] = batch_row
     
     def get_batch_row(self, row):
         if row is None:
@@ -176,7 +217,7 @@ class BatchTable(anvil.tables.Table):
             return self._batch_rows[row.get_id()]
         else:
             return self._get_new_batch_row(row)
-
+    
     def _get_new_batch_row(self, row):
         batch_row = BatchRow(row)
         if _batching:
