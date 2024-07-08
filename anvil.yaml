@@ -1,5 +1,5 @@
 allow_embedding: false
-package_name: Forum_Transaction_Bug
+package_name: auto_batch
 db_schema:
   table_1:
     title: Table 1
