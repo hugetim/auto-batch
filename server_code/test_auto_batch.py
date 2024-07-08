@@ -1,4 +1,4 @@
-from . import auto_batch_tables as tables
+from . import tables
 from . import test
 
 
