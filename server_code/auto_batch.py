@@ -1,6 +1,7 @@
 import anvil.tables
 from collections import defaultdict
 from functools import wraps
+from anvil.server import portable_class
 
 
 _add_queue = defaultdict(dict)
@@ -68,6 +69,7 @@ def if_not_deleted(func):
     return wrapper
 
 
+@portable_class
 class BatchRow(anvil.tables.Row):
     def __init__(self, row):
         self._row = row
@@ -131,6 +133,13 @@ class BatchRow(anvil.tables.Row):
     @staticmethod
     def _debatchify_column_values(column_values):
         return {column: _debatchify(value) for column, value in column_values.items()}
+
+    def __serialize__(self, global_data):
+        print("Warning: experimental BatchRow serialize as anvil.tables.Row")
+        return self._row
+
+    def __deserialize__(self, data, global_data):
+        self = data
 
 
 def _batchify(value):
