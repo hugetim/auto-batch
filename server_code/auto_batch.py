@@ -96,7 +96,7 @@ class BatchRow(anvil.tables.Row):
     def __getitem__(self, column):
         if column in self._cache:
             return self._cache[column]
-        value = batchify(self.row[column])
+        value = _batchify(self.row[column])
         if _batching:
             self._cache[column] = value
         return value
@@ -130,10 +130,10 @@ class BatchRow(anvil.tables.Row):
 
     @staticmethod
     def _debatchify_column_values(column_values):
-        return {column: debatchify(value) for column, value in column_values.items()}
+        return {column: _debatchify(value) for column, value in column_values.items()}
 
 
-def batchify(value):
+def _batchify(value):
     def _batchify_rows(rows):
         batch_table = BatchTable.of_row(rows[0])
         return [batch_table.get_batch_row(row) for row in rows]
@@ -146,7 +146,7 @@ def batchify(value):
         return value
 
 
-def debatchify(value):
+def _debatchify(value):
     if isinstance(value, BatchRow):
         return value.row
     elif isinstance(value, list) and value and isinstance(value[0], BatchRow):
