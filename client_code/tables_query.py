@@ -12,9 +12,10 @@ def __getattr__(attr):
 def batch_row_handling(cls):
     original_init = cls.__init__
 
-    def new_init(self, *query_expressions):
-        debatchified_exps = [debatchify(exp) for exp in query_expressions]
-        return original_init(self, *debatchified_exps)
+    def new_init(self, *args, **kwargs):
+        debatchified_args = [debatchify(arg) for arg in args]
+        debatchified_kwargs = {column: debatchify(value) for column, value in kwargs.items()}
+        return original_init(self, *debatchified_args, **debatchified_kwargs)
 
     cls.__init__ = new_init
     return cls
