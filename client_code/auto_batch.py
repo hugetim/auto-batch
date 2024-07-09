@@ -201,7 +201,7 @@ class BatchTable(anvil.tables.Table):
     def add_row(self, **column_values):
         global _add_queue
         if not _batching:
-            anvil.tables.add_row(**column_values)
+            self.table.add_row(**column_values)
         batch_row = BatchRow.from_batched_add(column_values)
         _add_queue[self][batch_row] = column_values
         return batch_row
