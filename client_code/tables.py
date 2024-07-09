@@ -1,6 +1,7 @@
 import anvil.tables
 from .auto_batch import batch_tables as app_tables
 from .auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
+from . import tables_query as query
 from functools import wraps
 from contextlib import nullcontext
 
@@ -26,6 +27,9 @@ class Transaction:
     def __exit__(self, exc_type, exc_value, traceback):
         self.auto_batch.__exit__(exc_type, exc_value, traceback)
         return self.transaction.__exit__(exc_type, exc_value, traceback)
+
+    def abort(self):
+        self.transaction.abort()
 
 
 def in_transaction(*d_args, **d_kwargs):

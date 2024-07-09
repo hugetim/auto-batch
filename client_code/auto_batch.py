@@ -1,4 +1,5 @@
 import anvil.tables
+from anvil.server import portable_class
 from collections import defaultdict
 from functools import wraps
 
@@ -68,6 +69,7 @@ def if_not_deleted(func):
     return wrapper
 
 
+@portable_class
 class BatchRow(anvil.tables.Row):
     def __init__(self, row):
         self._row = row
@@ -130,7 +132,7 @@ class BatchRow(anvil.tables.Row):
 
     @staticmethod
     def _debatchify_column_values(column_values):
-        return {column: _debatchify(value) for column, value in column_values.items()}
+        return {column: debatchify(value) for column, value in column_values.items()}
 
 
 def _batchify(value):
@@ -146,7 +148,7 @@ def _batchify(value):
         return value
 
 
-def _debatchify(value):
+def debatchify(value):
     if isinstance(value, BatchRow):
         return value.row
     elif isinstance(value, list) and value and isinstance(value[0], BatchRow):
@@ -155,6 +157,7 @@ def _debatchify(value):
         return value
 
 
+@portable_class
 class BatchSearchIterator(anvil.tables.SearchIterator):
     def __init__(self, batch_table, search_iterator):
         self._batch_table = batch_table
@@ -168,6 +171,7 @@ class BatchSearchIterator(anvil.tables.SearchIterator):
         return self._batch_table.get_batch_row(row)
 
 
+@portable_class
 class BatchTable(anvil.tables.Table):
     def __init__(self, table):
         self.table = table
@@ -235,6 +239,7 @@ class BatchTable(anvil.tables.Table):
         return batch_tables.get_by_id(row._table_id)
 
 
+@portable_class
 class BatchTables:
     def __init__(self):
         self._name_list = list(anvil.tables.app_tables)

@@ -25,6 +25,7 @@ def normal_test_code(tables):
     new_rows = [tables.app_tables.table_2.add_row(text="5") for i in range(10)]
     print(new_rows[0].get_id())
     new_rows[-1].update(text="6")
+    print(len(tables.app_tables.table_1.search(row=tables.query.not_(tables.query.not_(rows[1])), rows=tables.query.any_of(row1['rows']))))
 
 @tables.in_transaction
 def normal_test():
@@ -60,3 +61,4 @@ def batch_test_code(tables):
     new_rows = tables.app_tables.table_2.add_rows([dict(text="5")]*10)
     print(new_rows[0].get_id())
     new_rows[-1].update(text="6")
+    print(len(tables.app_tables.table_1.search(row=tables.query.not_(tables.query.not_(rows[1])), rows=tables.query.any_of(row1['rows']))))
