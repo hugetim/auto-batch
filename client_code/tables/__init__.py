@@ -3,15 +3,23 @@ from ..auto_batch import batch_tables as app_tables
 from ..auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
 import anvil.tables
 from functools import wraps
-from contextlib import nullcontext
+#from contextlib import nullcontext
+
+
+class _NullContext: # b/c Skulpt lacks contextlib
+    def __enter__(self):
+        return None
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
 
 
 def __getattr__(attr):
     return getattr(anvil.tables, attr)
 
 
-batch_update = nullcontext()
-batch_delete = nullcontext()
+batch_update = _NullContext()
+batch_delete = _NullContext()
 
 
 class Transaction:
