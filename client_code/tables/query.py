@@ -1,12 +1,10 @@
 import anvil.tables.query
-from .auto_batch import debatchify
+from ..auto_batch import debatchify
 from functools import wraps
 
 
 def __getattr__(attr):
-    print(f"tables_query.{attr}")
     if attr in ('all_of', 'any_of', 'none_of', 'not_'):
-        print(f"debatchifying tables.query.{attr}")
         return batch_row_handling(getattr(anvil.tables.query, attr))
     else:
         return getattr(anvil.tables.query, attr)

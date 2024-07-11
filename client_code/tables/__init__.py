@@ -1,13 +1,12 @@
+from . import query
+from ..auto_batch import batch_tables as app_tables
+from ..auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
 import anvil.tables
-from .auto_batch import batch_tables as app_tables
-from .auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
-from . import tables_query as query
 from functools import wraps
 from contextlib import nullcontext
 
 
 def __getattr__(attr):
-    print(f"tables.{attr}")
     return getattr(anvil.tables, attr)
 
 
@@ -57,3 +56,12 @@ def in_transaction(*d_args, **d_kwargs):
     else: # composite decorator now configured for 'relaxed' transaction
         # Return composite decorator as a function, to then be applied to func-to-decorate
         return in_transaction_with_auto_batch
+
+# Define __all__ to include everything defined in this module, plus query
+try:
+    __all__
+except NameError:
+    __all__ = []
+
+# Append query to __all__
+__all__ += ['query']
