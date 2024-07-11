@@ -94,15 +94,15 @@ class BatchRow(anvil.tables.Row):
     def row(self, value):
         self._row = value
 
-    @property
-    @if_not_deleted
-    def _id(self):
-        return self.row._id
+    # @property
+    # @if_not_deleted
+    # def _id(self):
+    #     return self.row._id
 
-    @property
-    @if_not_deleted
-    def _table_id(self):
-        return self.row._table_id
+    # @property
+    # @if_not_deleted
+    # def _table_id(self):
+    #     return self.row._table_id
 
     # @if_not_deleted
     # def __eq__(self, other):
@@ -140,19 +140,20 @@ class BatchRow(anvil.tables.Row):
 
     @if_not_deleted
     def update(self, **column_values):
+        global _update_queue
         debatchified_column_values = _debatchify_column_values(column_values)
         if not _batching:
-            self.row.update(**debatchified_column_values)
+            return self.row.update(**debatchified_column_values)
         _update_queue[self].update(debatchified_column_values)
         self._cache.update(debatchified_column_values)
 
     @if_not_deleted
     def delete(self):
         global _delete_queue
+        self._deleted = True
         if not _batching:
             return self.row.delete()
         _delete_queue.append(self)
-        self._deleted = True
             
     @if_not_deleted
     def get_id(self):
@@ -242,7 +243,7 @@ class BatchTable(anvil.tables.Table):
         global _add_queue
         debatchified_column_values = _debatchify_column_values(column_values)
         if not _batching:
-            return self.table.add_row(**debatchified_column_values)
+            return _batchify(self.table.add_row(**debatchified_column_values))
         batch_row = BatchRow.from_batched_add(debatchified_column_values)
         _add_queue[self][batch_row] = debatchified_column_values
         return batch_row
