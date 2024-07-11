@@ -96,7 +96,7 @@ class BatchRow(anvil.tables.Row):
 
     @if_not_deleted
     def __iter__(self):
-        return iter(_debatchify_column_values(dict(self._row)))
+        return iter(dict(self._row).items())
     
     @if_not_deleted
     def __getitem__(self, column):
