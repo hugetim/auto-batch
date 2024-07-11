@@ -1,4 +1,4 @@
-import anvil.tables as tables
+import anvil.tables
 from anvil_extras.logging import TimerLogger
 
 
@@ -26,14 +26,18 @@ def normal_test_code(tables):
     print(new_rows[0].get_id())
     new_rows[-1].update(text="6")
     print(len(tables.app_tables.table_1.search(row=tables.query.not_(tables.query.not_(rows[1])), rows=tables.query.any_of(row1['rows']))))
+    # print(row1._id, row1._table_id, row1._row._id, row1._row._table_id)
+    # print(isinstance(row1, tables.Row))
+    # print(row1._row == row1)
+    # print(row1._id == row1._row._id and row1._table_id == row1._row._table_id)
 
-@tables.in_transaction
+@anvil.tables.in_transaction
 def normal_test():
-    normal_test_code(tables)
+    normal_test_code(anvil.tables)
 
-@tables.in_transaction
+@anvil.tables.in_transaction
 def batch_test():
-    batch_test_code(tables)
+    batch_test_code(anvil.tables)
     
 def batch_test_code(tables):
     with TimerLogger("batch_test_code", format="{name}: {elapsed:6.3f} s | {msg}") as timer:
