@@ -94,25 +94,25 @@ class BatchRow(anvil.tables.Row):
     def row(self, value):
         self._row = value
 
-    # @property
-    # @if_not_deleted
-    # def _id(self):
-    #     return self.row._id
+    @property
+    @if_not_deleted
+    def _id(self):
+        return self.row._id
 
-    # @property
-    # @if_not_deleted
-    # def _table_id(self):
-    #     return self.row._table_id
+    @property
+    @if_not_deleted
+    def _table_id(self):
+        return self.row._table_id
 
-    # @if_not_deleted
-    # def __eq__(self, other):
-    #     if not isinstance(other, anvil.tables.Row):
-    #         return NotImplemented
-    #     return other._id == self._id and other._table_id == self._table_id
+    @if_not_deleted
+    def __eq__(self, other):
+        if not isinstance(other, anvil.tables.Row):
+            return NotImplemented
+        return other._id == self._id and other._table_id == self._table_id
 
-    # @if_not_deleted
-    # def __hash__(self):
-    #     return hash((self._table_id, self._id))
+    @if_not_deleted
+    def __hash__(self):
+        return hash((self._table_id, self._id))
     
     @if_not_deleted
     def __repr__(self):
