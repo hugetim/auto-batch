@@ -235,9 +235,6 @@ class BatchTable(anvil.tables.Table):
         if row_id in self._batch_rows:
             batch_row = self._batch_rows[row_id]
         else:
-            if _add_queue:
-                print("AutoBatch: process_batch_add triggered early by get_by_id")
-            process_batch_add()
             row = self.table.get_by_id(row_id, *args, **kwargs)
             batch_row = self._get_new_batch_row(row)
         return batch_row
