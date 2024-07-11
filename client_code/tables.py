@@ -7,6 +7,7 @@ from contextlib import nullcontext
 
 
 def __getattr__(attr):
+    print(f"tables.{attr}")
     return getattr(anvil.tables, attr)
 
 
