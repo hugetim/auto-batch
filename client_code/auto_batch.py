@@ -73,7 +73,7 @@ def if_not_deleted(func):
 class BatchRow(anvil.tables.Row):
     def __init__(self, row):
         self._row = row
-        self._cache = {}
+        self._cache = {} # debatchified
         self._deleted = False
 
     @staticmethod
@@ -104,15 +104,15 @@ class BatchRow(anvil.tables.Row):
     def _table_id(self):
         return self.row._table_id
 
-    @if_not_deleted
-    def __eq__(self, other):
-        if not isinstance(other, anvil.tables.Row):
-            return NotImplemented
-        return other._id == self._id and other._table_id == self._table_id
+    # @if_not_deleted
+    # def __eq__(self, other):
+    #     if not isinstance(other, BaseRow):
+    #         return NotImplemented
+    #     return other._id == self._id and other._table_id == self._table_id
 
-    @if_not_deleted
-    def __hash__(self):
-        return hash((self._table_id, self._id))
+    # @if_not_deleted
+    # def __hash__(self):
+    #     return id(self)
     
     @if_not_deleted
     def __repr__(self):
@@ -128,11 +128,11 @@ class BatchRow(anvil.tables.Row):
     @if_not_deleted
     def __getitem__(self, column):
         if column in self._cache:
-            return self._cache[column]
-        value = _batchify(self.row[column])
+            return _batchify(self._cache[column])
+        value = self.row[column]
         if _batching:
             self._cache[column] = value
-        return value
+        return _batchify(value)
 
     @if_not_deleted
     def __setitem__(self, column, value):
