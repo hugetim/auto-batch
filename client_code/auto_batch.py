@@ -167,13 +167,16 @@ def _debatchify_column_values(column_values):
 
 
 def _batchify(value):
+    def _is_row_but_not_batch_row(thing):
+        return isinstance(thing, anvil.tables.Row) and not isinstance(thing, BatchRow)
+        
     def _batchify_rows(rows):
         batch_table = BatchTable.of_row(rows[0])
         return [batch_table.get_batch_row(row) for row in rows]
         
-    if isinstance(value, anvil.tables.Row):
+    if _is_row_but_not_batch_row(value):
         return _batchify_rows([value])[0]
-    elif isinstance(value, list) and value and isinstance(value[0], anvil.tables.Row):
+    elif isinstance(value, list) and value and _is_row_but_not_batch_row(value[0]):
         return _batchify_rows(value)
     else:
         return value
