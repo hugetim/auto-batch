@@ -93,38 +93,7 @@ class BatchRow(anvil.tables.Row):
     @row.setter
     def row(self, value):
         self._row = value
-
-    # @property
-    # @if_not_deleted
-    # def _id(self):
-    #     return self.row._id
-
-    # @property
-    # @if_not_deleted
-    # def _table_id(self):
-    #     return self.row._table_id
-
-    # @if_not_deleted
-    # def __eq__(self, other):
-    #     if not isinstance(other, BaseRow):
-    #         return NotImplemented
-    #     return other._id == self._id and other._table_id == self._table_id
-
-    # @if_not_deleted
-    # def __hash__(self):
-    #     return id(self)
-    
-    @if_not_deleted
-    def __repr__(self):
-        if self._row:
-            return f"BatchRow({repr(self._row)})"
-        else:
-            return f"BatchRow.from_batched_add({repr(self._cache)})"
-    
-    @if_not_deleted
-    def __iter__(self):
-        return iter(dict(self._row).items())
-    
+   
     @if_not_deleted
     def __getitem__(self, column):
         if column in self._cache:
@@ -159,12 +128,19 @@ class BatchRow(anvil.tables.Row):
     def get_id(self):
         return self.row.get_id()
 
+    @if_not_deleted
+    def __repr__(self):
+        if self._row:
+            return f"BatchRow({repr(self._row)})"
+        else:
+            return f"BatchRow.from_batched_add({repr(self._cache)})"
+    
+    @if_not_deleted
+    def __iter__(self):
+        return iter(dict(self._row).items())
+    
     def clear_cache(self):
         self._cache.clear()
-
-
-def _debatchify_column_values(column_values):
-    return {column: debatchify(value) for column, value in column_values.items()}
 
 
 def _batchify(value):
@@ -192,18 +168,22 @@ def debatchify(value):
         return value
 
 
+def _debatchify_column_values(column_values):
+    return {column: debatchify(value) for column, value in column_values.items()}
+
+
 @portable_class
 class BatchSearchIterator(anvil.tables.SearchIterator):
     def __init__(self, batch_table, search_iterator):
         self._batch_table = batch_table
         self._search_iterator = search_iterator
-  
-    def __len__(self):
-        return len(self._search_iterator)
 
     def __getitem__(self, index):
         row = self._search_iterator[index]
         return self._batch_table.get_batch_row(row)
+  
+    def __len__(self):
+        return len(self._search_iterator)
 
 
 @portable_class
@@ -252,7 +232,7 @@ class BatchTable(anvil.tables.Table):
         return [self.add_row(**column_values) for column_values in column_values_list]
 
     def delete_all_rows(self, *args, **kwargs):
-        return self.table.delete_all_rows(*args, **kwargs) # TODO: try batching with other deletes
+        return self.table.delete_all_rows(*args, **kwargs)
 
     def add_batch_row(self, batch_row):
         self._batch_rows[batch_row.row.get_id()] = batch_row
