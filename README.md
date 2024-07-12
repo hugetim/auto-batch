@@ -1,5 +1,7 @@
 # auto-batch
 
+More performant Data Tables without the boilerplate. See [forum post](https://anvil.works/forum/t/auto-batch-table-operations/21376/) for more.
+
 ### Built With
 
 * [Anvil](https://anvil.works) - web apps built entirely with Python (See below for more.)
