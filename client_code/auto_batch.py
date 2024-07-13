@@ -115,10 +115,10 @@ class BatchRow(anvil.tables.Row):
         return object.__new__(cls)
 
     def __init__(self, row):
-        self._row = None
-        self.row = row
         self._cache = {} # debatchified
         self._deleted = False
+        self._row = None
+        self.row = row
 
     @staticmethod
     def from_batched_add(column_values):
@@ -138,8 +138,9 @@ class BatchRow(anvil.tables.Row):
     def row(self, value):
         if self._row:
             raise RuntimeError("BatchRow.row already set")
-        self._row = value
-        BatchTable.of_row(self._row).add_batch_row(self)
+        if value:
+            self._row = value
+            BatchTable.of_row(self._row).add_batch_row(self)
    
     @if_not_deleted
     def __getitem__(self, column):
