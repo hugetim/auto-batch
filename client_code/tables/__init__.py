@@ -64,12 +64,3 @@ def in_transaction(*d_args, **d_kwargs):
     else: # composite decorator now configured for 'relaxed' transaction
         # Return composite decorator as a function, to then be applied to func-to-decorate
         return in_transaction_with_auto_batch
-
-# Define __all__ to include everything defined in this module, plus query
-try:
-    __all__
-except NameError:
-    __all__ = []
-
-# Append query to __all__
-__all__ += ['query']

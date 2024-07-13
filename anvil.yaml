@@ -37,4 +37,4 @@ services:
 - source: /runtime/services/tables.yml
   client_config: {enable_v2: true}
   server_config: {}
-startup: {type: module, module: startup}
+startup: {type: module, module: _demo_startup}
