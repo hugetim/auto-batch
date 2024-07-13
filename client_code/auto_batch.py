@@ -18,7 +18,6 @@ def process_batch_add():
         rows = batch_table.table.add_rows(column_values_list)
         for i, row in enumerate(rows):
             batch_rows[i].row = row
-            BatchTable.of_row(row).add_batch_row(batch_rows[i])
     _add_queue.clear()
 
 
@@ -110,8 +109,14 @@ def debatchify_inputs(func):
 
 @portable_class
 class BatchRow(anvil.tables.Row):
+    def __new__(cls, row):
+        if row is not None and BatchTable.of_row(row).has_row_batched(row):
+            return BatchTable.of_row(row).retrieve_batch_row(row)
+        return object.__new__(cls)
+
     def __init__(self, row):
-        self._row = row
+        self._row = None
+        self.row = row
         self._cache = {} # debatchified
         self._deleted = False
 
@@ -131,7 +136,10 @@ class BatchRow(anvil.tables.Row):
 
     @row.setter
     def row(self, value):
+        if self._row:
+            raise RuntimeError("BatchRow.row already set")
         self._row = value
+        BatchTable.of_row(self._row).add_batch_row(self)
    
     @if_not_deleted
     def __getitem__(self, column):
@@ -226,7 +234,7 @@ class BatchTable(anvil.tables.Table):
             batch_row = self._batch_rows[row_id]
         else:
             row = self.table.get_by_id(row_id, *args, **kwargs)
-            batch_row = self._get_new_batch_row(row)
+            batch_row = BatchRow(row)
         return batch_row
 
     def add_row(self, **column_values):
@@ -245,21 +253,22 @@ class BatchTable(anvil.tables.Table):
         return self.table.delete_all_rows(*args, **kwargs)
 
     def add_batch_row(self, batch_row):
-        self._batch_rows[batch_row.row.get_id()] = batch_row
+        self._batch_rows[batch_row.get_id()] = batch_row
+
+    def has_row_batched(self, row):
+        return row.get_id() in self._batch_rows
     
     def get_batch_row(self, row):
         if row is None:
             return None
-        elif row.get_id() in self._batch_rows:
-            return self._batch_rows[row.get_id()]
+        elif self.has_row_batched(row):
+            return self.retrieve_batch_row(row)
         else:
-            return self._get_new_batch_row(row)
-    
-    def _get_new_batch_row(self, row):
-        batch_row = BatchRow(row)
-        self._batch_rows[row.get_id()] = batch_row
-        return batch_row
+            return BatchRow(row)
 
+    def retrieve_batch_row(self, row):
+        return self._batch_rows[row.get_id()]
+    
     def clear_cache(self):
         for batch_row in self._batch_rows.values():
             batch_row.clear_cache()
@@ -267,7 +276,7 @@ class BatchTable(anvil.tables.Table):
 
     @staticmethod
     def of_row(row):
-        return batch_tables.get_by_id(row._table_id)
+        return get_table_by_id(row._table_id)
 
 
 @portable_class
@@ -293,12 +302,16 @@ class BatchTables:
     def __iter__(self):
         return iter(self._name_list)
 
-    def get_by_id(self, table_id):
+    def _get_by_id(self, table_id):
         return self[self._name_lookup[table_id]]
     
     def clear_cache(self):
         for batch_table in self._batch_tables.values():
-            batch_table.clear_cache()
+            batch_table.clear_cache() 
 
 
 batch_tables = BatchTables()
+
+
+def get_table_by_id(table_id):
+    return batch_tables._get_by_id(table_id)

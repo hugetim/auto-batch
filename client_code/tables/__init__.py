@@ -1,6 +1,6 @@
 from . import query
 from ..auto_batch import batch_tables as app_tables
-from ..auto_batch import AutoBatch, BatchRow, BatchSearchIterator, BatchTable
+from ..auto_batch import get_table_by_id, AutoBatch, BatchRow, BatchSearchIterator, BatchTable
 import anvil.tables
 from functools import wraps
 #from contextlib import nullcontext

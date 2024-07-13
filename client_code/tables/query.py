@@ -1,6 +1,5 @@
 import anvil.tables.query
-from ..auto_batch import debatchify
-from functools import wraps
+from ..auto_batch import debatchify_inputs
 
 
 def __getattr__(attr):
@@ -11,13 +10,5 @@ def __getattr__(attr):
 
 
 def batch_row_handling(cls):
-    original_init = cls.__init__
-
-    @wraps(original_init)
-    def new_init(self, *args, **kwargs):
-        debatchified_args = [debatchify(arg) for arg in args]
-        debatchified_kwargs = {column: debatchify(value) for column, value in kwargs.items()}
-        return original_init(self, *debatchified_args, **debatchified_kwargs)
-
-    cls.__init__ = new_init
+    cls.__init__ = debatchify_inputs(cls.__init__)
     return cls
