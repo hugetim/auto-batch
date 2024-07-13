@@ -1,4 +1,4 @@
-from ..auto_batch import debatchify_inputs, BatchTable
+from .auto_batch import debatchify_inputs, BatchTable
 import anvil.users
 
 
