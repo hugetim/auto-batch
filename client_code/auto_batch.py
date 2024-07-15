@@ -198,6 +198,13 @@ class BatchRow(anvil.tables.Row):
     def __iter__(self):
         return iter(dict(self.row).items())
 
+    @if_not_deleted
+    def __serialize__(self, global_data):
+        if _add_queue or _update_queue or _delete_queue:
+            print("AutoBatch: process_batch triggered early by row __serialize__")
+        process_batch()
+        return self.__dict__
+    
     @property
     def cache(self):
         return self._cache
@@ -218,6 +225,12 @@ class BatchSearchIterator(anvil.tables.SearchIterator):
   
     def __len__(self):
         return len(self._search_iterator)
+
+    def __serialize__(self, global_data):
+        if _add_queue or _update_queue or _delete_queue:
+            print("AutoBatch: process_batch triggered early by search iterator __serialize__")
+        process_batch()
+        return self.__dict__
 
 
 @portable_class
@@ -283,6 +296,12 @@ class BatchTable(anvil.tables.Table):
 
     def retrieve_batch_row(self, row):
         return self._batch_rows[row.get_id()]
+
+    def __serialize__(self, global_data):
+        if _add_queue or _update_queue or _delete_queue:
+            print("AutoBatch: process_batch triggered early by table __serialize__")
+        process_batch()
+        return self.__dict__
     
     def clear_cache(self):
         for batch_row in self._batch_rows.values():
@@ -294,7 +313,6 @@ class BatchTable(anvil.tables.Table):
         return get_table_by_id(row._table_id)
 
 
-@portable_class
 class BatchTables:
     def __init__(self):
         self._name_list = list(anvil.tables.app_tables)
