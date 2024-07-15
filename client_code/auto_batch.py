@@ -4,6 +4,7 @@ from collections import defaultdict
 from functools import wraps
 
 
+USE_WRAPPED = True
 _add_queue = defaultdict(list)
 _update_queue = defaultdict(dict)
 _delete_queue = []
