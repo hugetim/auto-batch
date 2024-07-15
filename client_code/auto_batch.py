@@ -4,7 +4,7 @@ from collections import defaultdict
 from functools import wraps
 
 
-_add_queue = defaultdict(dict)
+_add_queue = defaultdict(list)
 _update_queue = defaultdict(dict)
 _delete_queue = []
 _batching = False
@@ -13,8 +13,8 @@ _batching = False
 def process_batch_add():
     global _add_queue
     for batch_table in _add_queue:
-        batch_rows = list(_add_queue[batch_table].keys())
-        column_values_list = [column_values for column_values in _add_queue[batch_table].values()]
+        batch_rows = _add_queue[batch_table]
+        column_values_list = [batch_row.cache for batch_row in batch_rows]
         rows = batch_table.table.add_rows(column_values_list)
         for i, row in enumerate(rows):
             batch_rows[i].row = row
@@ -109,11 +109,6 @@ def debatchify_inputs(func):
 
 @portable_class
 class BatchRow(anvil.tables.Row):
-    def __new__(cls, row):
-        if row is not None and BatchTable.of_row(row).has_row_batched(row):
-            return BatchTable.of_row(row).retrieve_batch_row(row)
-        return object.__new__(cls)
-
     def __init__(self, row):
         self._cache = {} # debatchified
         self._deleted = False
@@ -121,16 +116,16 @@ class BatchRow(anvil.tables.Row):
         self.row = row
 
     @staticmethod
-    def from_batched_add(column_values):
+    def from_batched_add(column_values, batch_table):
         batch_row = BatchRow(None)
         batch_row._cache = column_values
+        batch_row.batch_table = batch_table
         return batch_row
     
     @property
     def row(self):
         if not self._row:
-            if _add_queue:
-                print("AutoBatch: process_batch_add triggered early by BatchRow.row")
+            print("AutoBatch: process_batch_add triggered early by BatchRow.row")
             process_batch_add()
         return self._row
 
@@ -141,7 +136,19 @@ class BatchRow(anvil.tables.Row):
         if value:
             self._row = value
             BatchTable.of_row(self._row).add_batch_row(self)
-   
+
+    @if_not_deleted
+    def __eq__(self, other):
+        if not isinstance(other, BatchRow):
+            return NotImplemented
+        if self._row is None:
+            return id(other) == id(self)
+        return other.row._id == self.row._id and other.row._table_id == self.row._table_id
+
+    @if_not_deleted
+    def __hash__(self):
+        return hash((self.row._table_id, self.row._id))
+    
     @if_not_deleted
     def __getitem__(self, column):
         if column in self._cache:
@@ -159,18 +166,22 @@ class BatchRow(anvil.tables.Row):
     def update(self, **column_values):
         global _update_queue
         debatchified_column_values = _debatchify_dict_values(column_values)
-
         if not _batching:
             return self.row.update(**debatchified_column_values)
-        _update_queue[self].update(debatchified_column_values)
         self._cache.update(debatchified_column_values)
+        if self._row is None:
+            return # cache update implicitly updates batch_add, with no need for batch_update then
+        _update_queue[self].update(debatchified_column_values)
+        
 
     @if_not_deleted
     def delete(self):
-        global _delete_queue
+        global _add_queue, _delete_queue
         self._deleted = True
         if not _batching:
             return self.row.delete()
+        if self._row is None:
+            return _add_queue[self.batch_table].remove(self)
         _delete_queue.append(self)
             
     @if_not_deleted
@@ -179,14 +190,17 @@ class BatchRow(anvil.tables.Row):
 
     @if_not_deleted
     def __repr__(self):
-        if self._row:
-            return f"BatchRow({repr(self._row)})"
-        else:
+        if self._row is None:
             return f"BatchRow.from_batched_add({repr(self._cache)})"
+        return f"BatchRow({repr(self._row)})"          
     
     @if_not_deleted
     def __iter__(self):
-        return iter(dict(self._row).items())
+        return iter(dict(self.row).items())
+
+    @property
+    def cache(self):
+        return self._cache
     
     def clear_cache(self):
         self._cache.clear()
@@ -243,8 +257,8 @@ class BatchTable(anvil.tables.Table):
         debatchified_column_values = _debatchify_dict_values(column_values)
         if not _batching:
             return _batchify(self.table.add_row(**debatchified_column_values))
-        batch_row = BatchRow.from_batched_add(debatchified_column_values)
-        _add_queue[self][batch_row] = debatchified_column_values
+        batch_row = BatchRow.from_batched_add(debatchified_column_values, batch_table=self)
+        _add_queue[self].append(batch_row)
         return batch_row
 
     def add_rows(self, column_values_list):
