@@ -1,9 +1,9 @@
-from .auto_batch import debatchify_inputs, BatchTable
+from .auto_batch import unwrap_any_input_rows, BatchTable
 import anvil.users
 
 
 def force_login(*args, **kwargs):
-    return debatchify_inputs(anvil.users.force_login)(*args, **kwargs)
+    return unwrap_any_input_rows(anvil.users.force_login)(*args, **kwargs)
 
 
 def get_user(*args, **kwargs):

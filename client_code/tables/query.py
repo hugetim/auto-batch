@@ -3,8 +3,8 @@ from ..auto_batch import USE_WRAPPED
 
 
 def batch_row_handling(cls):
-    from ..auto_batch import debatchify_inputs
-    cls.__init__ = debatchify_inputs(cls.__init__)
+    from ..auto_batch import unwrap_any_input_rows
+    cls.__init__ = unwrap_any_input_rows(cls.__init__)
     return cls
 
 
