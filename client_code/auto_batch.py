@@ -132,7 +132,7 @@ class BatchRow(anvil.tables.Row):
             raise RuntimeError("BatchRow.row already set")
         if value:
             self._row = value
-            BatchTable.of_row(self._row).add_batch_row(self)
+            get_table_by_id(self._row._table_id).add_batch_row(self)
 
     @if_not_deleted
     def __eq__(self, other):
@@ -211,13 +211,11 @@ class BatchRow(anvil.tables.Row):
 
 @portable_class
 class BatchSearchIterator(anvil.tables.SearchIterator):
-    def __init__(self, batch_table, search_iterator):
-        self._batch_table = batch_table
+    def __init__(self, search_iterator):
         self._search_iterator = search_iterator
 
     def __getitem__(self, index):
-        row = self._search_iterator[index]
-        return self._batch_table.get_batch_row(row)
+        return BatchRow(self._search_iterator[index])
   
     def __len__(self):
         return len(self._search_iterator)
@@ -241,7 +239,6 @@ class BatchTable(anvil.tables.Table):
             print("AutoBatch: process_batch triggered early by search")
         process_batch()
         return BatchSearchIterator(
-            self, 
             unwrap_any_input_rows(self.table.search)(*args, **kwargs)
         )
 
@@ -249,17 +246,14 @@ class BatchTable(anvil.tables.Table):
         if _add_queue or _update_queue or _delete_queue:
             print("AutoBatch: process_batch triggered early by get")
         process_batch()
-        return self.get_batch_row(
-            unwrap_any_input_rows(self.table.get)(*args, **kwargs)
-        )
+        raw_out = unwrap_any_input_rows(self.table.get)(*args, **kwargs)
+        return BatchRow(raw_out) if raw_out else None
     
     def get_by_id(self, row_id, *args, **kwargs):
         if row_id in self._batch_rows:
-            batch_row = self._batch_rows[row_id]
+            return self._batch_rows[row_id]
         else:
-            row = self.table.get_by_id(row_id, *args, **kwargs)
-            batch_row = BatchRow(row)
-        return batch_row
+            return BatchRow(self.table.get_by_id(row_id, *args, **kwargs))
 
     def add_row(self, **column_values):
         global _add_queue
@@ -279,20 +273,6 @@ class BatchTable(anvil.tables.Table):
     def add_batch_row(self, batch_row):
         self._batch_rows[batch_row.get_id()] = batch_row
 
-    def has_row_batched(self, row):
-        return row.get_id() in self._batch_rows
-    
-    def get_batch_row(self, row):
-        if row is None:
-            return None
-        elif self.has_row_batched(row):
-            return self.retrieve_batch_row(row)
-        else:
-            return BatchRow(row)
-
-    def retrieve_batch_row(self, row):
-        return self._batch_rows[row.get_id()]
-
     def __serialize__(self, global_data):
         if _add_queue or _update_queue or _delete_queue:
             print("AutoBatch: process_batch triggered early by table __serialize__")
@@ -303,10 +283,6 @@ class BatchTable(anvil.tables.Table):
         for batch_row in self._batch_rows.values():
             batch_row.clear_cache()
         #self._batch_rows.clear()
-
-    @staticmethod
-    def of_row(row):
-        return get_table_by_id(row._table_id)
 
 
 class BatchTables:
