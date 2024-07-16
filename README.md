@@ -1,6 +1,6 @@
 # auto-batch
 
-More performant Data Tables without the boilerplate. See [forum post](https://anvil.works/forum/t/auto-batch-table-operations/21376/) for more.
+Faster Anvil Data Tables via batching, without the boilerplate. See [forum post](https://anvil.works/forum/t/auto-batch-table-operations/21376/) for more.
 
 ### Built With
 
