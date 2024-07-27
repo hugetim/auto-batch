@@ -160,8 +160,20 @@ class BatchRow(anvil.tables.Row):
         self.update(**{column: value})
 
     @if_not_deleted
-    def update(self, **column_values):
+    def update(*args, **column_values):
         global _update_queue
+        if len(args) > 2:
+            raise TypeError("expected at most 1 argument, got %d" % (len(args) - 1))
+        elif len(args) == 2:
+            column_values = dict(args[1], **column_values)
+        self = args[0]
+        if not column_values:
+            # backwards compatability hack
+            if _add_queue or _update_queue or _delete_queue:
+                print("AutoBatch: process_batch triggered early by row.update() w/o args")
+            process_batch()
+            self.clear_cache()
+            return
         unwrapped_column_values = _unwrap_any_row_values(column_values)
         if not _batching:
             return self.row.update(**unwrapped_column_values)
