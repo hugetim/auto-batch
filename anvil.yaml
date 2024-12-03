@@ -1,66 +1,63 @@
 allow_embedding: false
-package_name: auto_batch
+correct_dependency_ids: {}
 db_schema:
   table_1:
-    title: Table 1
     client: none
-    server: full
     columns:
-    - name: object
-      admin_ui: {width: 200}
+    - admin_ui: {width: 200}
+      name: object
       type: simpleObject
-    - name: rows
-      admin_ui: {order: 3, width: 200}
+    - admin_ui: {order: 3, width: 200}
+      name: rows
+      target: table_2
       type: link_multiple
+    - admin_ui: {order: 2, width: 200}
+      name: row
       target: table_2
-    - name: row
-      admin_ui: {width: 200, order: 2}
       type: link_single
-      target: table_2
-  table_2:
-    title: Table 2
-    client: none
     server: full
+    title: Table 1
+  table_2:
+    client: none
     columns:
-    - name: text
-      admin_ui: {width: 200}
+    - admin_ui: {width: 200}
+      name: text
       type: string
+    server: full
+    title: Table 2
   users:
     client: none
-    server: full
     columns:
-    - name: email
-      admin_ui: {order: 0, width: 200}
+    - admin_ui: {order: 0, width: 200}
+      name: email
       type: string
-    - name: enabled
-      admin_ui: {order: 1, width: 200}
+    - admin_ui: {order: 1, width: 200}
+      name: enabled
       type: bool
-    - name: last_login
-      admin_ui: {order: 2, width: 200}
+    - admin_ui: {order: 2, width: 200}
+      name: last_login
       type: datetime
-    - name: password_hash
-      admin_ui: {order: 3, width: 200}
+    - admin_ui: {order: 3, width: 200}
+      name: password_hash
       type: string
-    - name: n_password_failures
-      admin_ui: {order: 4, width: 200}
+    - admin_ui: {order: 4, width: 200}
+      name: n_password_failures
       type: number
-    - name: confirmed_email
-      admin_ui: {order: 5, width: 200}
+    - admin_ui: {order: 5, width: 200}
+      name: confirmed_email
       type: bool
+    server: full
     title: Users
+dependencies: []
 name: AutoBatch
-startup_form: null
-correct_dependency_ids: {}
-runtime_options: {version: 2, client_version: '3', server_version: python3-full, server_spec: null}
-dependencies:
-- dep_id: dep_aam5q63bik0vk47
-  version: {version_tag: v2.5.3}
-  resolution_hints: {app_id: C6ZZPAPN4YYF5NVJ, name: Anvil Extras, package_name: anvil_extras}
+package_name: auto_batch
+runtime_options: {client_version: '3', server_spec: null, server_version: python3-full, version: 2}
 services:
-- source: /runtime/services/tables.yml
-  client_config: {enable_v2: true}
+- client_config: {enable_v2: true}
   server_config: {}
-- source: /runtime/services/anvil/users.yml
-  client_config: {allow_signup: false, enable_automatically: true, use_email: true, confirm_email: true}
+  source: /runtime/services/tables.yml
+- client_config: {allow_signup: false, confirm_email: true, enable_automatically: true, use_email: true}
   server_config: {user_table: users}
-startup: {type: module, module: _demo_startup}
+  source: /runtime/services/anvil/users.yml
+startup: {module: _startup, type: module}
+startup_form: null
