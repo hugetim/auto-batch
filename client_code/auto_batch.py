@@ -69,14 +69,21 @@ def if_not_deleted(func):
     return wrapper
 
 
+def wrap_row(row):
+    if row is None:
+        return None
+    batch_table = get_table_by_id(row._table_id)
+    return batch_table.batch_row(row)
+
+
 def _wrap_any_rows(value):
     def _is_row_but_not_batch_row(thing):
         return isinstance(thing, anvil.tables.Row) and not isinstance(thing, BatchRow)
 
     if _is_row_but_not_batch_row(value):
-        return BatchRow(value)
+        return wrap_row(value)
     elif isinstance(value, list) and value and _is_row_but_not_batch_row(value[0]):
-        return [BatchRow(row) for row in value]
+        return [wrap_row(row) for row in value]
     else:
         return value
 
@@ -227,7 +234,7 @@ class BatchSearchIterator(anvil.tables.SearchIterator):
         self._search_iterator = search_iterator
 
     def __getitem__(self, index):
-        return BatchRow(self._search_iterator[index])
+        return wrap_row(self._search_iterator[index])
   
     def __len__(self):
         return len(self._search_iterator)
@@ -259,13 +266,14 @@ class BatchTable(anvil.tables.Table):
             print("AutoBatch: process_batch triggered early by get")
         process_batch()
         raw_out = unwrap_any_input_rows(self.table.get)(*args, **kwargs)
-        return BatchRow(raw_out) if raw_out else None
+        return self.batch_row(raw_out) if raw_out else None
     
     def get_by_id(self, row_id, *args, **kwargs):
         if row_id in self._batch_rows:
             return self._batch_rows[row_id]
         else:
-            return BatchRow(self.table.get_by_id(row_id, *args, **kwargs))
+            row = self.table.get_by_id(row_id, *args, **kwargs)
+            return BatchRow(row)
 
     def add_row(self, **column_values):
         global _add_queue
@@ -284,7 +292,11 @@ class BatchTable(anvil.tables.Table):
 
     def add_batch_row(self, batch_row):
         self._batch_rows[batch_row.get_id()] = batch_row
-
+    
+    def batch_row(self, row):
+        retrieved = self._batch_rows.get(row.get_id())
+        return retrieved if retrieved else BatchRow(row)
+    
     def __serialize__(self, global_data):
         if _add_queue or _update_queue or _delete_queue:
             print("AutoBatch: process_batch triggered early by table __serialize__")

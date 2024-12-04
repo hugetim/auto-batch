@@ -1,4 +1,4 @@
-from .auto_batch import unwrap_any_input_rows, BatchRow
+from .auto_batch import unwrap_any_input_rows, wrap_row
 import anvil.users
 
 
@@ -7,5 +7,4 @@ def force_login(*args, **kwargs):
 
 
 def get_user(*args, **kwargs):
-    raw_out = anvil.users.get_user(*args, **kwargs)
-    return BatchRow(raw_out) if raw_out else None
+    return wrap_row(anvil.users.get_user(*args, **kwargs))
