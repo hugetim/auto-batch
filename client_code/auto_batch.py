@@ -110,7 +110,7 @@ class BatchRow(anvil.tables.Row):
         self._cache = {} # unwrapped_rows
         self._deleted = False
         self._row = None
-        self.row = row
+        self.row = row # property
 
     @staticmethod
     def from_batched_add(column_values, batch_table):
