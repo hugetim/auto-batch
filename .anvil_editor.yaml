@@ -1,7 +1,5 @@
 unique_ids:
-  assets:
-    standard-page.html: HOKUT2EHGGFPGEJKZZ3AG76D5EQAERSF
-    theme.css: RC6AB7HYQCZOIJQV724EV4CQWF6LVGBQ
+  assets: {}
   forms: {}
   modules:
     _startup: '1719087683748644303970981.0312'
