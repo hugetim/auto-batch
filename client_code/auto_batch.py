@@ -208,6 +208,10 @@ class BatchRow(anvil.tables.Row):
         if self._row is None:
             return f"BatchRow.from_batched_add({repr(self._cache)})"
         return f"BatchRow({repr(self._row)})"          
+
+    @if_not_deleted
+    def __str__(self):
+        return f"<auto_batch.tables.BatchRow: {self._cache}>"   
     
     @if_not_deleted
     def __iter__(self):
