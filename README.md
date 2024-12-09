@@ -1,6 +1,87 @@
 # auto-batch
 
-Faster Anvil Data Tables via batching, without the boilerplate. See [forum post](https://anvil.works/forum/t/auto-batch-table-operations/21376/) for more.
+Faster Anvil Data Tables via batching, without the boilerplate. 
+
+By default, each [Anvil Data Table](https://anvil.works/docs/data-tables#using-data-tables-from-python) operation (with the exception of accessing cached information) makes a separate round-trip to the database, which takes on the order of 0.02 seconds. If you are looping through dozens or hundreds of row updates, deletes, or additions, that can add up to noticeable lags. (Moreover, within [a transaction](https://anvil.works/docs/data-tables/transactions#using-a-decorator), longer execution times are compounded by increasing the likelihood of conflicts triggering one or more re-tries of the entire transaction.) The [Accelerated Tables Beta](https://anvil.works/docs/data-tables/accelerated-tables#new-features) allows you to batch add, update, and delete rows and thus condense many Data Tables operations to a single round trip to the database. But doing so requires changes to your code (even when the Data Table operations are within a transaction, which implies they are meant to be executed together as a block). For example:
+
+```python
+import anvil.tables as tables
+
+@tables.in_transaction
+def update_cache():
+    now = utcnow()
+    rows = tables.app_tables.table_1.search()
+    with tables.batch_update, tables.batch_delete:                 # batch refactor
+        new_log_rows = []                                          # batch refactor
+        for row in rows:
+            if row['expire_dt'] < now:
+                row.delete()
+            elif row['next_update_dt'] < now:
+                row['next_update_dt'] = now + timedelta(minutes=30)
+                new_log_rows.append(dict(id=row['id'], date=now))  # batch refactor
+    tables.app_tables.update_log.add_rows(new_log_rows)            # batch refactor
+```
+
+With auto-batch, you get the same performance gains without changing your code, aside from subbing in `auto_batch.tables` for `anvil.tables`:
+
+```python
+from auto_batch import tables
+
+@tables.in_transaction
+def update_cache():
+    now = utcnow()
+    rows = tables.app_tables.table_1.search()
+    print(f"Table 1 has {len(rows)} rows.")
+    for row in rows:
+        if row['expire_dt'] < now:
+            row.delete()
+        elif row['next_update_dt'] < now:
+            row['next_update_dt'] = now + timedelta(minutes=30)
+            tables.app_tables.update_log.add_row(id=row['id'], date=now)
+```
+
+However, auto-batch is not yet production-ready. Use at your own risk. Help in development (and especially writing a comprehensive test suite) welcomed!
+
+## Setup
+
+* Ensure that you have [enabled Accelerated Tables](https://anvil.works/docs/data-tables/accelerated-tables#enabling-the-accelerated-tables-beta) for your app.
+* Add auto-batch to your app as a [third-party dependency](https://anvil.works/forum/t/third-party-dependencies/8712) with the token `PKF2MZRQMPCXFWNE`.
+
+## Usage
+
+Use `auto_batch.tables` any place you would use `anvil.tables`, as well as `auto_batch.users` in places of `anvil.users` so that `get_user` and `force_login` work with auto-batch's wrapped Table rows. Table operations within transactions will then be batched automatically. To batch adds, updates, and deletes outside of transactions, you can use the `AutoBatch` context manager:
+
+```python
+with auto_batch.tables.AutoBatch():
+    ...
+```
+
+Unfortunately, some Tables functionality is not yet supported. Otherwise, if you only supported features, auto-batch should work as a plug-in substitute for anvil.tables in your app:
+
+- [anvil.tables](https://anvil.works/docs/api/anvil.tables)
+  - [x] `app_tables`  
+  - [x] Exceptions
+  - [x] Functions (esp. `in_transaction`)
+  - [x] `Row`
+  - `SearchIterator`
+    - [ ] `to_csv`
+  - `Table`
+    - [x] `add_row`
+    - [x] `add_rows` 
+    - [ ] `client_readable`
+    - [ ] `client_writeable`
+    - [ ] `client_writeable_cascase`
+    - [x] `delete_all_rows`
+    - [x] `get`
+    - [x] `get_by_id`
+    - [ ] `has_row`
+    - [x] `list_columns`
+    - [x] `search`
+    - [ ] `to_csv`
+  - [x] `Transaction`
+- [x] [anvil.tables.query](https://anvil.works/docs/api/anvil.tables.query)
+- [x] [anvil.users](https://anvil.works/docs/api/anvil.users)
+
 
 ### Built With
 
